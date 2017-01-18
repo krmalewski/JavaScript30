@@ -23,12 +23,83 @@
       <input type="text" name="item" placeholder="Item Name" required>
       <input type="submit" value="+ Add Item">
     </form>
+    <button class="check-all">Check All</button>
+    <button class="clear">Clear All</button>
   </div>
 
 <script>
   const addItems = document.querySelector('.add-items');
   const itemsList = document.querySelector('.plates');
-  const items = [];
+  // on page load we will try to get items from local storage or fall back on an empty array if it is not there
+  // we need to parse the data back into an array of objects because it is being stored as a string
+  let items = JSON.parse(localStorage.getItem('items')) || [];
+  const clear = document.querySelector('.clear');
+
+  function addItem(e) {
+    // forms automatically reload the page or load another page but since we are doing this all client-side, we need to prevent this reload from happening
+    e.preventDefault();
+
+    // instead of using document.querySelector we can use this.querySelector because 'this' is the form so we will look inside the form for something with the name attribute of item
+    // .value will give us what was typed inside the input form
+    const text = (this.querySelector('[name=item')).value;
+    const item = {
+      text,
+      done: false
+    }
+    // push this item into our items array
+    items.push(item);
+    // every time we add an item, we are recreating this entire list
+    populateList(items, itemsList);
+    // save this array in local storage
+    // local storage is actually just a key-value pair so we cannot pass in our object until we stringify it (localStorage will only accept strings as value pairs)
+    localStorage.setItem('items', JSON.stringify(items));
+    // clear input form
+    this.reset();
+  }
+
+  // pass in a list of items to populate (set this default to an empty array so that if you forget to pass an argument it will not break your javascript)
+  // the second argument is a place to list these items
+  function populateList(plates = [], platesList) {
+    // .map will return an array but since we are setting innerHTML we just need one big string so use .join at the end
+    platesList.innerHTML = plates.map((plate, i) => {
+      return `
+        <li>
+          <input type="checkbox" data-index=${i} id="item${i}" ${plate.done ? 'checked' : ''}/>
+          <label for="item${i}">${plate.text}</label>
+        </li>
+      `;
+    }).join('');
+  }
+
+  function toggleDone(e) {
+    if (!e.target.matches('input')) return; // skip this unless it's an input
+    const el = e.target;
+    const index = el.dataset.index;
+    // find the item with that index in the array
+    // set its done property to the opposite of what it currently is
+    items[index].done = !items[index].done;
+    // update the localStorage
+    localStorage.setItem('items', JSON.stringify(items));
+    // visually update what is on our page
+    populateList(items, itemsList);
+  }
+
+  function clearItems() {
+    console.log('clear')
+    localStorage.clear();
+    items = [];
+    populateList(items, itemsList);
+  }
+
+  addItems.addEventListener('submit', addItem);
+
+  // event delegation will have us listen for a click on the unordered list to see if we clicked any of it's children. This is the best method because when we are adding this event listener, the ul does not necessarily have all its children yet
+  itemsList.addEventListener('click', toggleDone);
+
+  // on pageload call the populateList after retrieving items from local storage
+  populateList(items, itemsList);
+
+  clear.addEventListener('click', clearItems);
 
 </script>
 
